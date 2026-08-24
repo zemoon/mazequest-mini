@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 800 },
+    { "file": "Gameplay.dc.html", "x": 1360, "y": 0, "w": 1280, "h": 800 },
+    { "file": "Customize.dc.html", "x": 2720, "y": 0, "w": 1280, "h": 800 }
+  ],
+  "annotations": [
+    { "id": "set-title", "x": 0, "y": -110, "w": 640, "text": "MazeQuest Mini — UI Mockups (static reference)\nStart Menu → Level/HUD → Field Desk (Customize)" }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=Special+Elite&display=swap">
+  <style>
+    :root{
+      --paper: oklch(0.97 0.015 85);
+      --paper-dark: oklch(0.93 0.02 80);
+      --ink: oklch(0.27 0.03 55);
+      --green-deep: oklch(0.30 0.06 152);
+      --green: oklch(0.40 0.08 152);
+      --green-light: oklch(0.55 0.09 152);
+      --green-soft: oklch(0.90 0.03 145);
+      --brown: oklch(0.42 0.05 55);
+      --brown-dark: oklch(0.28 0.04 50);
+      --tan: oklch(0.80 0.06 75);
+      --red: oklch(0.52 0.16 25);
+      --blue: oklch(0.45 0.09 250);
+      --gold: oklch(0.74 0.11 80);
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;}
+    a{color:var(--green-deep);} a:hover{color:var(--green-deep);}
+    .screen{
+      width:1280px; height:800px; position:relative;
+      background:
+        repeating-linear-gradient(0deg, oklch(0.94 0.015 85 / 0.5) 0px, oklch(0.94 0.015 85 / 0.5) 1px, transparent 1px, transparent 34px),
+        var(--paper);
+      font-family:'Public Sans', system-ui, sans-serif;
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .frame{
+      position:absolute; inset:26px;
+      border:10px solid var(--brown-dark);
+      border-radius:14px;
+      background: var(--paper);
+      box-shadow: inset 0 0 0 4px var(--tan), 0 18px 40px oklch(0.2 0.02 60 / 0.25);
+      display:flex; flex-direction:column;
+    }
+    .topbar{
+      display:flex; align-items:center; gap:14px;
+      padding:22px 34px 0 34px;
+      color:var(--brown-dark);
+    }
+    .seal{ width:34px; height:34px; color:var(--green-deep); flex:none; }
+    .seal svg{ width:100%; height:100%; }
+    .eyebrow{
+      font-family:'Special Elite', 'Courier New', monospace;
+      font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--brown);
+    }
+    .hero{
+      flex:1; display:flex; align-items:center; justify-content:space-between;
+      padding:10px 56px 0 56px; gap:40px;
+    }
+    .hero-left{ display:flex; flex-direction:column; gap:26px; max-width:600px; }
+    .logo{
+      font-family:'Bitter', serif; font-weight:800;
+      font-size:76px; line-height:0.98; margin:0;
+      color:var(--green-deep);
+      text-shadow: 2px 3px 0 oklch(0.93 0.02 80);
+    }
+    .stamp-badge{
+      display:inline-flex; align-self:flex-start;
+      font-family:'Special Elite','Courier New',monospace;
+      font-size:20px; letter-spacing:.12em;
+      color:var(--red);
+      border:3px double var(--red);
+      padding:6px 16px;
+      transform: rotate(-4deg);
+      border-radius:4px;
+      opacity:0.9;
+    }
+    .menu{ display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+    .btn{
+      display:flex; align-items:center; gap:14px;
+      padding:16px 26px; border-radius:8px;
+      font-family:'Public Sans',sans-serif; font-weight:600; font-size:19px;
+      letter-spacing:.02em;
+      width:340px;
+    }
+    .btn svg{ width:22px; height:22px; flex:none; }
+    .btn-primary{
+      background:var(--green); color:var(--paper);
+      border:2px solid var(--green-deep);
+      box-shadow: 0 4px 0 var(--green-deep);
+    }
+    .btn-outline{
+      background:var(--paper); color:var(--green-deep);
+      border:2px solid var(--green);
+      box-shadow: 0 3px 0 var(--tan);
+    }
+    .hero-right{ position:relative; flex:none; }
+    .photo-card{
+      width:300px; background:var(--paper);
+      border:10px solid var(--paper); outline:1px solid oklch(0.8 0.02 80);
+      box-shadow: 0 16px 30px oklch(0.2 0.02 60 / 0.3);
+      transform: rotate(3deg);
+      border-radius:2px;
+      position:relative;
+    }
+    .photo-card img{ width:100%; display:block; }
+    .pin{
+      position:absolute; top:-16px; left:50%; transform:translateX(-50%);
+      width:26px; height:26px; color:var(--red);
+      filter: drop-shadow(0 3px 2px oklch(0.2 0.02 60 / 0.4));
+    }
+    .photo-caption{
+      font-family:'Special Elite','Courier New',monospace;
+      font-size:13px; text-align:center; padding:10px 6px 4px 6px;
+      color:var(--brown-dark);
+    }
+    .footer{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:16px 40px 22px 40px;
+      font-family:'Special Elite','Courier New',monospace;
+      font-size:12px; color:var(--brown); letter-spacing:.04em;
+      border-top:1px dashed var(--tan);
+      margin:18px 34px 0 34px;
+    }
+  </style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-seal" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <path d="M12 5.5v13M5.5 12h13M7.3 7.3l9.4 9.4M16.7 7.3L7.3 16.7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="currentColor"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24">
+      <path d="M4 15c0-5 3.5-9 8-9s8 4 8 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M2 15h20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-help" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M9.5 9.5c.3-1.5 1.5-2.3 2.7-2.3 1.4 0 2.6 1 2.6 2.3 0 1.5-1.4 1.9-2.1 2.6-.4.4-.6.8-.6 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="12" cy="17" r="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-door" viewBox="0 0 24 24">
+      <rect x="4" y="3" width="12" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <circle cx="13" cy="12" r="1" fill="currentColor"/>
+      <path d="M16 12h5m0 0l-3-3m3 3l-3 3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24">
+      <circle cx="12" cy="9" r="5" fill="currentColor"/>
+      <path d="M12 14v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="screen">
+  <div class="frame">
+    <div class="topbar">
+      <div class="seal"><svg viewBox="0 0 24 24"><use href="#i-seal"/></svg></div>
+      <div class="eyebrow">Woodland Bureau of Aquatic Infrastructure &mdash; Field Division 7</div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-left">
+        <h1 class="logo">MazeQuest<br>Mini</h1>
+        <div class="stamp-badge">THE DAM AUDITOR</div>
+
+        <div class="menu">
+          <div class="btn btn-primary"><svg viewBox="0 0 24 24"><use href="#i-play"/></svg>PLAY</div>
+          <div class="btn btn-outline"><svg viewBox="0 0 24 24"><use href="#i-cap"/></svg>CUSTOMIZE</div>
+          <div class="btn btn-outline"><svg viewBox="0 0 24 24"><use href="#i-help"/></svg>HOW TO PLAY</div>
+          <div class="btn btn-outline"><svg viewBox="0 0 24 24"><use href="#i-door"/></svg>QUIT</div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="photo-card">
+          <svg class="pin" viewBox="0 0 24 24"><use href="#i-pin"/></svg>
+          <img src="bertie.png" alt="Inspector Bertie Castorum">
+          <div class="photo-caption">Insp. B. Castorum &mdash; Field Auditor</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Draft Build 0.1 &mdash; Field Office Preview</span>
+      <span>Click PLAY to begin the audit</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

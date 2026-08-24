@@ -1,0 +1,900 @@
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   1. LEVEL DATA — The North Culvert Circuit
+   ============================================================ */
+const MAP = [
+  "#########################",
+  "####################X####",
+  "####################.####",
+  "########WWwWwWwWW###.k###",
+  "########.........FFF.####",
+  "########ma.#.m.#m########",
+  "##############G##########",
+  "##########.~L~.##########",
+  "#.ka######.~~o.##########",
+  "#a..##a###.~~~.##########",
+  "#.####.###.~~~.##########",
+  "#..........~~~.##.Ca#####",
+  "###.####.#.o~~.##..k#####",
+  "###.####.#.L~L...a..#####",
+  "##P.#####################",
+  "###S#####################",
+  "#########################"
+];
+const W = MAP[0].length, H = MAP.length;
+
+const START   = {x:3, y:15};
+const EXIT    = {x:20, y:1};
+const GATE    = {x:14, y:6};
+const CABINET = {x:18, y:11};
+const SIGN    = {x:2,  y:14};
+const SLOTS   = [{x:10,y:3},{x:12,y:3},{x:14,y:3}];
+const LANE    = [{x:11,y:10},{x:12,y:10},{x:13,y:10}];
+const FLOOD   = [{x:17,y:4},{x:18,y:4},{x:19,y:4}];
+
+const CRATES = {
+  "2,8":   {id:'A', items:['eyeshade','pencil','damp'],     where:'Meadow Cache'},
+  "19,12": {id:'B', items:['fedora','calipers','silver'],   where:'Old Survey Shed'},
+  "21,3":  {id:'C', items:['hood','clipboard','scarred'],   where:'a nook past the dam'}
+};
+
+const POSTED_CODE = {code:'12-B', cls:'Riverside'};
+const FORMS = [
+  {code:'12-B', cls:'Riverside', ok:true},
+  {code:'12-D', cls:'Riverside', ok:false},
+  {code:'21-B', cls:'Riverside', ok:false},
+  {code:'12-B', cls:'Ridgeline', ok:false}
+];
+
+/* ============================================================
+   2. LOADOUT — four hats, four implements, four pelts
+   ============================================================ */
+const ITEMS = {
+  hat: [
+    {id:'cap',      name:'Regulation Bureau Cap',   icon:'h-cap',      free:true,
+     flavor:'Third-generation felt. Keeps the drizzle off the paperwork.',
+     trait:'wearing the standard-issue cap'},
+    {id:'eyeshade', name:'Novelty Eyeshade',        icon:'h-eyeshade',
+     flavor:'Confiscated from a raccoon accountant.',
+     trait:'wearing a confiscated eyeshade'},
+    {id:'fedora',   name:'Feather Fedora',          icon:'h-fedora',
+     flavor:'Traded for two blank permits. The feather has opinions.',
+     trait:'sporting a traded fedora'},
+    {id:'hood',     name:'Waterproof Field Hood',   icon:'h-hood',
+     flavor:'River-crew issue. Smells faintly of pond.',
+     trait:'hooded against the weather'}
+  ],
+  implement: [
+    {id:'stamp',     name:'Stamp of Record',      icon:'m-stamp',     free:true,
+     flavor:'APPROVED / DENIED. Mostly the latter.',
+     trait:'carrying the dual-sided stamp'},
+    {id:'pencil',    name:'Chewed Pencil Stub',   icon:'m-pencil',
+     flavor:'Gnawed to a nub across years of compliance notes.',
+     trait:'gripping a well-chewed pencil'},
+    {id:'calipers',  name:'Brass Calipers',       icon:'m-calipers',
+     flavor:'Measures dam width to Code 14-B, to the millimetre.',
+     trait:'armed with brass calipers'},
+    {id:'clipboard', name:'Clipboard of Record',  icon:'m-clipboard',
+     flavor:'Holds forty forms and one (1) standing grudge.',
+     trait:'clutching the full clipboard'}
+  ],
+  pelt: [
+    {id:'slick',   name:'Standard Slick Pelt',    icon:'p-slick',   free:true,
+     flavor:'Regulation sheen, per uniform code 3.',
+     trait:'maintaining a regulation sheen'},
+    {id:'damp',    name:'Damp Fieldwork Pelt',    icon:'p-damp',
+     flavor:'Permanently damp. Smells of long pond duty.',
+     trait:'still faintly damp from fieldwork'},
+    {id:'silver',  name:'Silver-Streaked Pelt',   icon:'p-silver',
+     flavor:'Two decades of river dams. Junior otters go quiet.',
+     trait:'showing the silver streaks of seniority'},
+    {id:'scarred', name:'Scarred Veteran Pelt',   icon:'p-scarred',
+     flavor:'One nick per contested permit. There have been many.',
+     trait:'carrying the scars of contested permits'}
+  ]
+};
+const SLOT_META = [
+  {key:'hat',       label:'Hat',       icon:'h-cap'},
+  {key:'implement', label:'Implement', icon:'m-stamp'},
+  {key:'pelt',      label:'Pelt',      icon:'p-slick'}
+];
+const PELT_TINT = {
+  slick:   'none',
+  damp:    'saturate(.82) brightness(.94) hue-rotate(-6deg)',
+  silver:  'saturate(.55) brightness(1.08) contrast(.96)',
+  scarred: 'saturate(1.12) brightness(.88) contrast(1.08)'
+};
+
+function findItem(slot, id){ return ITEMS[slot].find(function(i){ return i.id === id; }); }
+
+function closingLine(h, i, p){
+  if (p === 'silver' || p === 'scarred') return 'compliant, and mildly intimidating.';
+  if (h === 'fedora')    return 'compliant, if a little theatrical.';
+  if (i === 'calipers')  return 'compliant, and alarmingly precise.';
+  if (h === 'eyeshade')  return 'compliant, in a deeply clerical sort of way.';
+  if (i === 'pencil')    return 'compliant, and overdue a new pencil.';
+  return 'compliant, and thoroughly unremarkable.';
+}
+function fieldNote(){
+  const h = findItem('hat', L.hat), i = findItem('implement', L.implement), p = findItem('pelt', L.pelt);
+  return '"Inspector Bertie Castorum was observed ' + h.trait + ', ' + i.trait +
+         ', and ' + p.trait + '. Bureau assessment: ' + closingLine(L.hat, L.implement, L.pelt) + '"';
+}
+
+/* ============================================================
+   3. PERSISTENCE (best-effort; never required)
+   ============================================================ */
+const SAVE_KEY = 'mazequest-mini.v1';
+let L = {hat:'cap', implement:'stamp', pelt:'slick'};
+let unlocked = new Set(['cap','stamp','slick']);
+let best = null;
+
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.unlocked)) d.unlocked.forEach(function(u){ unlocked.add(u); });
+    if(d.loadout){
+      ['hat','implement','pelt'].forEach(function(k){
+        if(d.loadout[k] && findItem(k, d.loadout[k]) && unlocked.has(d.loadout[k])) L[k] = d.loadout[k];
+      });
+    }
+    if(typeof d.best === 'number') best = d.best;
+  }catch(e){ /* private mode, blocked storage — play on */ }
+}
+function save(){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      unlocked: Array.from(unlocked), loadout: L, best: best
+    }));
+  }catch(e){ /* nothing to do; state stays in memory */ }
+}
+
+/* ============================================================
+   4. HELPERS
+   ============================================================ */
+const $  = function(s){ return document.querySelector(s); };
+const key = function(x,y){ return x + ',' + y; };
+const svg = function(id, cls){
+  return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' aria-hidden="true"><use href="#' + id + '"/></svg>';
+};
+function mmss(sec){
+  const m = Math.floor(sec/60), s = sec % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+function place(el, x, y){
+  el.style.transform = 'translate(calc((var(--ts) + 1px) * ' + x + '), calc((var(--ts) + 1px) * ' + y + '))';
+}
+
+/* ============================================================
+   5. GAME STATE
+   ============================================================ */
+const board = $('#board');
+let S = null;
+let tileEls = [];
+let entLayer = null;
+let playerEl = null, promptEl = null;
+let tickTimer = null, moveTimer = null;
+const held = {};
+
+function freshState(){
+  const logs = [];
+  const pickups = {};
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const c = MAP[y][x];
+    if(c === 'L') logs.push({x:x, y:y, id:'log'+logs.length});
+    if(c === 'a') pickups[key(x,y)] = 'acorn';
+    if(c === 'm') pickups[key(x,y)] = 'shim';
+    if(c === 'k') pickups[key(x,y)] = 'crate';
+  }
+  return {
+    px: START.x, py: START.y, facing: 'down',
+    logs: logs, selected: null,
+    pickups: pickups,
+    acorns: 0, shims: 0, forms: 0, nudges: 0, denied: 0,
+    slotsFilled: [false,false,false],
+    raft: false, gateOpen: false, damFixed: false,
+    hasForms: false, cabinetDone: false, sawRiver: false,
+    seconds: 0, running: false, done: false
+  };
+}
+
+/* --- terrain queries ---------------------------------------------------- */
+function ch(x,y){
+  if(x<0||y<0||x>=W||y>=H) return '#';
+  return MAP[y][x];
+}
+function isWater(x,y){ const c = ch(x,y); return c === '~' || c === 'L'; }
+function logAt(x,y){
+  for(let i=0;i<S.logs.length;i++) if(S.logs[i].x===x && S.logs[i].y===y) return S.logs[i];
+  return null;
+}
+function walkable(x,y){
+  const c = ch(x,y);
+  if(c === '#' || c === 'o' || c === 'W' || c === 'w' || c === 'C' || c === 'P') return false;
+  if(c === 'G') return S.gateOpen;
+  if(c === 'F') return S.damFixed;
+  if(c === '~' || c === 'L') return !!logAt(x,y);
+  return true;
+}
+function freeWater(x,y){ return isWater(x,y) && !logAt(x,y) && !(S.px===x && S.py===y); }
+
+/* ============================================================
+   6. BOARD RENDERING
+   ============================================================ */
+const TILE_ICON = {
+  '#':['t-forest','i-tree',null],
+  'o':['t-rock','i-rock',null],
+  'W':['t-dam',null,null],
+  'w':['t-slot','i-wedge',null],
+  'G':['t-gate','i-gate',null],
+  'S':['t-start','i-flag','DOCK'],
+  'X':['t-exit','i-exit','EXIT'],
+  'C':['t-poi','i-cabinet','FILE'],
+  'P':['t-poi','i-sign','SIGN']
+};
+
+function buildBoard(){
+  board.innerHTML = '';
+  tileEls = [];
+  for(let y=0;y<H;y++){
+    tileEls[y] = [];
+    for(let x=0;x<W;x++){
+      const c = MAP[y][x];
+      const d = document.createElement('div');
+      d.className = 'tile';
+      d.dataset.x = x; d.dataset.y = y;
+      const spec = TILE_ICON[c];
+      if(spec){
+        d.classList.add(spec[0]);
+        let inner = spec[1] ? svg(spec[1]) : '';
+        if(spec[2]) inner += '<span class="tag">' + spec[2] + '</span>';
+        d.innerHTML = inner;
+      } else if(c === '~' || c === 'L'){
+        d.classList.add('t-water');
+      } else if(c === 'F'){
+        d.classList.add('t-flood');
+      } else {
+        d.classList.add('t-trail');
+        if((x + y) % 2 === 0) d.classList.add('alt');
+      }
+      board.appendChild(d);
+      tileEls[y][x] = d;
+    }
+  }
+  entLayer = document.createElement('div');
+  entLayer.id = 'ents';
+  board.appendChild(entLayer);
+}
+
+function renderEnts(){
+  entLayer.innerHTML = '';
+
+  // pickups
+  Object.keys(S.pickups).forEach(function(k){
+    const p = k.split(',').map(Number);
+    const kind = S.pickups[k];
+    const el = document.createElement('div');
+    el.className = 'ent pickup pk-' + kind;
+    el.dataset.k = k;
+    el.innerHTML = svg(kind === 'acorn' ? 'i-acorn' : kind === 'shim' ? 'i-wedge' : 'i-crate');
+    place(el, p[0], p[1]);
+    entLayer.appendChild(el);
+  });
+
+  // logs
+  S.logs.forEach(function(lg){
+    const el = document.createElement('div');
+    el.className = 'ent log' + (S.raft ? ' locked' : '') + (S.selected === lg.id ? ' sel' : '');
+    el.innerHTML = svg('i-log');
+    el.dataset.log = lg.id;
+    place(el, lg.x, lg.y);
+    entLayer.appendChild(el);
+  });
+
+  // nudge targets for the selected log
+  if(S.selected && !S.raft){
+    const lg = S.logs.find(function(l){ return l.id === S.selected; });
+    if(lg){
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+        const nx = lg.x + d[0], ny = lg.y + d[1];
+        if(freeWater(nx, ny)){
+          const dot = document.createElement('div');
+          dot.className = 'nudge-dot';
+          dot.dataset.nx = nx; dot.dataset.ny = ny;
+          place(dot, nx, ny);
+          entLayer.appendChild(dot);
+        }
+      });
+    }
+  }
+
+  // player
+  playerEl = document.createElement('div');
+  playerEl.className = 'ent player' + (S.facing === 'left' ? ' flip' : '');
+  playerEl.innerHTML = '<img src="' + PORTRAIT + '" alt="">' +
+    '<span class="badge">' + svg(findItem('implement', L.implement).icon) + '</span>';
+  playerEl.querySelector('img').style.filter =
+    'drop-shadow(0 3px 3px var(--shadow-hard)) ' + (PELT_TINT[L.pelt] === 'none' ? '' : PELT_TINT[L.pelt]);
+  place(playerEl, S.px, S.py);
+  entLayer.appendChild(playerEl);
+
+  // interaction prompt
+  promptEl = document.createElement('div');
+  promptEl.className = 'ent prompt-anchor';
+  promptEl.style.display = 'none';
+  promptEl.innerHTML = '<span class="prompt-chip"></span>';
+  entLayer.appendChild(promptEl);
+
+  refreshTiles();
+  updatePrompt();
+}
+
+function refreshTiles(){
+  SLOTS.forEach(function(s, i){
+    tileEls[s.y][s.x].classList.toggle('filled', S.slotsFilled[i]);
+  });
+  tileEls[GATE.y][GATE.x].classList.toggle('open', S.gateOpen);
+  FLOOD.forEach(function(f){
+    const t = tileEls[f.y][f.x];
+    t.classList.toggle('t-flood', !S.damFixed);
+    t.classList.toggle('t-trail', S.damFixed);
+  });
+}
+
+/* ============================================================
+   7. INTERACTION TARGETS
+   ============================================================ */
+function adjacentTarget(){
+  const around = [[0,-1],[0,1],[-1,0],[1,0]];
+  for(let i=0;i<around.length;i++){
+    const x = S.px + around[i][0], y = S.py + around[i][1];
+    const c = ch(x,y);
+    if(c === 'C' && !S.cabinetDone) return {kind:'cabinet', x:x, y:y, label:'[E] Open the filing cabinet'};
+    if(c === 'C') return {kind:'cabinet', x:x, y:y, label:'[E] Read the cabinet again'};
+    if(c === 'P') return {kind:'sign', x:x, y:y, label:'[E] Read the notice'};
+    if(c === 'G' && !S.gateOpen) return {kind:'gate', x:x, y:y, label:'[E] Present a permit'};
+    if(c === 'w'){
+      const idx = SLOTS.findIndex(function(s){ return s.x===x && s.y===y; });
+      if(idx > -1 && !S.slotsFilled[idx]){
+        return {kind:'slot', x:x, y:y, idx:idx,
+                label: S.shims > 0 ? '[E] Drive a shim into the slot' : '[E] Empty slot — you need a shim'};
+      }
+    }
+  }
+  if(!S.raft){
+    const near = S.logs.some(function(l){
+      return Math.abs(l.x - S.px) + Math.abs(l.y - S.py) <= 2;
+    });
+    if(near) return {kind:'hint', label:'Click a log, then click open water'};
+  }
+  return null;
+}
+function updatePrompt(){
+  if(!promptEl) return;
+  const t = adjacentTarget();
+  if(!t){ promptEl.style.display = 'none'; return; }
+  promptEl.style.display = '';
+  promptEl.querySelector('.prompt-chip').textContent = t.label;
+  place(promptEl, S.px, S.py);
+}
+
+/* ============================================================
+   8. MOVEMENT
+   ============================================================ */
+const DIRS = {up:[0,-1], down:[0,1], left:[-1,0], right:[1,0]};
+
+function step(dir){
+  if(!S || !S.running || S.done) return;
+  const d = DIRS[dir];
+  const nx = S.px + d[0], ny = S.py + d[1];
+  S.facing = dir;
+
+  // walking into a log pushes it, if there is open water beyond
+  const lg = logAt(nx, ny);
+  if(lg && !S.raft){
+    const fx = nx + d[0], fy = ny + d[1];
+    if(freeWater(fx, fy)){
+      lg.x = fx; lg.y = fy;
+      S.nudges++;
+      renderEnts();
+      checkRaft();
+      return;
+    }
+  }
+
+  if(!walkable(nx, ny)){
+    playerEl.classList.remove('bonk');
+    void playerEl.offsetWidth;
+    playerEl.classList.add('bonk');
+    playerEl.classList.toggle('flip', S.facing === 'left');
+    return;
+  }
+
+  S.px = nx; S.py = ny;
+  playerEl.classList.toggle('flip', S.facing === 'left');
+  place(playerEl, S.px, S.py);
+
+  if(!S.sawRiver && S.px >= 10){ S.sawRiver = true; updateHud(); }
+  collect();
+  updatePrompt();
+
+  if(S.px === EXIT.x && S.py === EXIT.y) win();
+}
+
+function collect(){
+  const k = key(S.px, S.py);
+  const kind = S.pickups[k];
+  if(!kind) return;
+  delete S.pickups[k];
+  const gone = entLayer.querySelector('.pickup[data-k="' + k + '"]');
+  if(gone && gone.parentNode) gone.parentNode.removeChild(gone);
+
+  if(kind === 'acorn'){
+    S.acorns++;
+    toast('i-acorn', 'Acorn stamp filed (' + S.acorns + ' of 6)');
+  } else if(kind === 'shim'){
+    S.shims++;
+    toast('i-wedge', 'Picked up a wooden shim (' + S.shims + ' carried)');
+  } else if(kind === 'crate'){
+    const c = CRATES[k];
+    let gained = 0;
+    c.items.forEach(function(id){ if(!unlocked.has(id)){ unlocked.add(id); gained++; } });
+    save();
+    toast('i-crate', gained
+      ? 'Supply Requisition ' + c.id + ' — ' + gained + ' new items for the Field Desk'
+      : 'Supply Requisition ' + c.id + ' — already logged');
+  }
+  updateHud();
+}
+
+/* ============================================================
+   9. PUZZLE 1 — the log raft
+   ============================================================ */
+function checkRaft(){
+  const done = LANE.every(function(t){ return !!logAt(t.x, t.y); });
+  if(done && !S.raft){
+    S.raft = true;
+    S.selected = null;
+    renderEnts();
+    toast('i-log', 'The logs settle into a raft. The crossing is open.', 'good');
+    updateHud();
+  }
+  updatePrompt();
+}
+
+function nudgeTo(nx, ny){
+  const lg = S.logs.find(function(l){ return l.id === S.selected; });
+  if(!lg || S.raft) return;
+  if(Math.abs(lg.x - nx) + Math.abs(lg.y - ny) !== 1) return;
+  if(!freeWater(nx, ny)) return;
+  lg.x = nx; lg.y = ny;
+  S.nudges++;
+  renderEnts();
+  checkRaft();
+}
+
+board.addEventListener('click', function(e){
+  if(!S || !S.running || S.done) return;
+  const dot = e.target.closest('.nudge-dot');
+  if(dot){ nudgeTo(+dot.dataset.nx, +dot.dataset.ny); return; }
+  const lel = e.target.closest('.log');
+  if(lel){
+    if(S.raft){ toast('i-log', 'The raft is fixed in place now.'); return; }
+    const id = lel.dataset.log;
+    const lg = S.logs.find(function(l){ return l.id === id; });
+    if(lg && S.px === lg.x && S.py === lg.y){
+      toast('i-log', 'Hard to shift a log you are standing on.');
+      return;
+    }
+    S.selected = (S.selected === id) ? null : id;
+    renderEnts();
+    return;
+  }
+  if(S.selected){ S.selected = null; renderEnts(); }
+});
+
+/* ============================================================
+   10. INTERACTIONS — cabinet, gate, dam, notice
+   ============================================================ */
+function interact(){
+  if(!S || !S.running || S.done) return;
+  const t = adjacentTarget();
+  if(!t || t.kind === 'hint') return;
+
+  if(t.kind === 'sign'){
+    openModal({
+      title: 'Posted Notice',
+      sub: 'Weathered board, Bureau green, one drawing pin missing',
+      body: '<div class="notice">File the Central Filing Dam by end of day.<br>' +
+            'Shortcuts through the culvert <b>are logged</b>.</div>' +
+            '<p style="color:var(--ink-2);font-size:14px;margin:0">Three problems stand between this dock and the ' +
+            'Central Filing Dam: an uncrossed river, an unpermitted gate, and a dam that is leaking on Bureau time.</p>',
+      actions: [{label:'Get on with it', primary:true}]
+    });
+    return;
+  }
+
+  if(t.kind === 'cabinet'){
+    if(!S.cabinetDone){
+      S.cabinetDone = true; S.hasForms = true; S.forms = 4;
+      updateHud();
+      toast('i-form', 'Four riverside permits recovered from the cabinet', 'good');
+    }
+    openModal({
+      title: 'Old Survey Shed — Filing Cabinet',
+      sub: 'Four permits, three of them wrong',
+      body: '<p style="color:var(--ink-2);font-size:14px;margin:0 0 12px">' +
+            'Someone filed these by feel rather than by code. Read the gate notice carefully before you present one.</p>' +
+            '<div class="form-list">' + FORMS.map(function(f){
+              return '<div class="form-opt" style="cursor:default">' + svg('i-form') +
+                     '<span><span class="code">Form ' + f.code + '</span>' +
+                     '<span class="cls">' + f.cls + ' Class</span></span></div>';
+            }).join('') + '</div>',
+      actions: [{label:'Pocket all four', primary:true}]
+    });
+    return;
+  }
+
+  if(t.kind === 'gate'){
+    if(!S.hasForms){
+      toast('i-gate', 'The notice wants a permit. Your pockets are empty.', 'bad');
+      return;
+    }
+    openModal({
+      title: 'Permit Gate',
+      sub: 'An unpermitted barricade, which is its own kind of funny',
+      body: '<div class="notice">PASSAGE BY PERMIT ONLY<br>Required: <b>FORM ' +
+            POSTED_CODE.code + ' &mdash; ' + POSTED_CODE.cls.toUpperCase() + ' CLASS</b></div>' +
+            '<p style="color:var(--ink-2);font-size:14px;margin:0 0 4px">Present one:</p>' +
+            '<div class="form-list">' + FORMS.map(function(f, i){
+              return '<button class="form-opt" data-form="' + i + '">' + svg('i-form') +
+                     '<span><span class="code">Form ' + f.code + '</span>' +
+                     '<span class="cls">' + f.cls + ' Class</span></span></button>';
+            }).join('') + '</div>',
+      actions: [{label:'Step back', primary:false}]
+    });
+    return;
+  }
+
+  if(t.kind === 'slot'){
+    if(S.shims < 1){
+      toast('i-wedge', 'No shims on you. Three are scattered around the work yard.', 'bad');
+      return;
+    }
+    S.shims--;
+    S.slotsFilled[t.idx] = true;
+    refreshTiles();
+    updateHud();
+    const n = S.slotsFilled.filter(Boolean).length;
+    if(n < 3){
+      toast('i-wedge', 'Shim driven home. ' + (3 - n) + ' slot' + (n === 2 ? '' : 's') + ' still weeping.', 'good');
+    } else {
+      S.damFixed = true;
+      refreshTiles();
+      toast('i-dam', 'The leak stops. Downstream, the flooded trail drains away.', 'good');
+      updateHud();
+    }
+    updatePrompt();
+  }
+}
+
+function presentForm(i){
+  const f = FORMS[i];
+  if(f.ok){
+    S.gateOpen = true;
+    closeModal();
+    refreshTiles();
+    updateHud();
+    updatePrompt();
+    toast('i-check', 'Form 12-B accepted. The barricade swings open.', 'good');
+  } else {
+    S.denied++;
+    closeModal();
+    flashDenied();
+    const why = f.code !== POSTED_CODE.code
+      ? 'Wrong form number — the notice says ' + POSTED_CODE.code + '.'
+      : 'Wrong class — the notice says ' + POSTED_CODE.cls + '.';
+    toast('i-gate', why, 'bad');
+  }
+}
+
+function flashDenied(){
+  const d = $('#denied');
+  d.hidden = false;
+  const span = d.querySelector('span');
+  span.style.animation = 'none';
+  void span.offsetWidth;
+  span.style.animation = '';
+  setTimeout(function(){ d.hidden = true; }, 950);
+}
+
+/* ============================================================
+   11. HUD, TOASTS, MODALS
+   ============================================================ */
+function objectiveText(){
+  if(!S.sawRiver)  return 'Follow the trail north-east to the river';
+  if(!S.raft)      return 'Nudge three logs into the crossing lane';
+  if(!S.hasForms)  return 'Find the filing cabinet in the Old Survey Shed';
+  if(!S.gateOpen)  return 'Present the right permit at the gate';
+  if(!S.damFixed)  return 'Plug the cracked dam — three shims, three slots';
+  return 'Reach the Central Filing Dam and file it';
+}
+function updateHud(){
+  $('#objective').textContent = objectiveText();
+  $('#n-forms').textContent = S.forms;
+  $('#n-shims').textContent = S.shims;
+  $('#n-acorns').textContent = S.acorns + ' / 6';
+}
+
+let toastSeq = 0;
+function toast(icon, text, tone){
+  const wrap = $('#toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (tone ? ' ' + tone : '');
+  t.innerHTML = svg(icon) + '<span>' + text + '</span>';
+  wrap.appendChild(t);
+  const id = ++toastSeq;
+  setTimeout(function(){
+    t.classList.add('leaving');
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 320);
+  }, 2300 + (id % 3) * 100);
+  while(wrap.children.length > 2) wrap.removeChild(wrap.firstChild);
+}
+
+function openModal(cfg){
+  const m = $('#modal');
+  m.innerHTML =
+    '<h3 id="modal-title">' + cfg.title + '</h3>' +
+    '<div class="sub">' + cfg.sub + '</div>' +
+    cfg.body +
+    '<div class="modal-actions">' + (cfg.actions || []).map(function(a, i){
+      return '<button class="btn btn-sm ' + (a.primary ? 'btn-primary' : 'btn-ghost') +
+             '" data-act="' + i + '">' + a.label + '</button>';
+    }).join('') + '</div>';
+  $('#veil').hidden = false;
+  const first = m.querySelector('button');
+  if(first) first.focus();
+}
+function closeModal(){ $('#veil').hidden = true; board.focus(); }
+
+$('#veil').addEventListener('click', function(e){
+  const f = e.target.closest('[data-form]');
+  if(f){ presentForm(+f.dataset.form); return; }
+  const a = e.target.closest('[data-act]');
+  if(a){ closeModal(); return; }
+  const p = e.target.closest('.pause-act');
+  if(p){ pauseAction(p.dataset.pause); return; }
+  if(e.target === $('#veil')) closeModal();
+});
+
+/* ============================================================
+   12. PAUSE + TIMER
+   ============================================================ */
+function openPause(){
+  S.running = false;
+  openModal({
+    title: 'Paused',
+    sub: 'The river will still be there',
+    body: '<div class="pause-list">' +
+      '<button class="btn btn-primary pause-act" data-pause="resume">' + svg('i-play') + 'Resume the audit</button>' +
+      '<button class="btn btn-ghost pause-act" data-pause="desk">' + svg('h-cap') + 'Field Desk</button>' +
+      '<button class="btn btn-ghost pause-act" data-pause="restart">' + svg('i-restart') + 'Restart the level</button>' +
+      '<button class="btn btn-ghost pause-act" data-pause="menu">' + svg('i-back') + 'Quit to menu</button>' +
+      '</div>',
+    actions: []
+  });
+}
+function pauseAction(what){
+  closeModal();
+  if(what === 'resume'){ S.running = true; }
+  else if(what === 'desk'){ showScreen('custom'); customReturn = 'game'; }
+  else if(what === 'restart'){ startGame(true); }
+  else { stopGame(); showScreen('menu'); }
+}
+function startTick(){
+  clearInterval(tickTimer);
+  tickTimer = setInterval(function(){
+    if(S && S.running && !S.done) S.seconds++;
+  }, 1000);
+}
+
+/* ============================================================
+   13. WIN
+   ============================================================ */
+function win(){
+  S.done = true; S.running = false;
+  clearInterval(tickTimer);
+  if(best === null || S.seconds < best){ best = S.seconds; }
+  save();
+  $('#win-time').textContent = mmss(S.seconds);
+  $('#win-acorns').textContent = S.acorns;
+  $('#win-nudges').textContent = S.nudges;
+  $('#win-denied').textContent = S.denied;
+  $('#win-notes').textContent = fieldNote();
+  const perfect = S.acorns === 6;
+  const clean = S.denied === 0;
+  $('#win-blurb').textContent =
+    'The Central Filing Dam is on the record. ' +
+    (clean ? 'Not one permit rejected, which the gate will be quietly annoyed about. '
+           : 'The gate rejected ' + S.denied + ' permit' + (S.denied === 1 ? '' : 's') + ' on the way through, but nobody writes that down. ') +
+    (perfect ? 'All six acorn stamps accounted for.'
+             : S.acorns + ' of 6 acorn stamps collected — the rest are still out there.');
+  showScreen('win');
+  updateMenuRecord();
+}
+function updateMenuRecord(){
+  $('#menu-record').textContent = best === null
+    ? 'No audit filed yet'
+    : 'Best circuit: ' + mmss(best);
+}
+
+/* ============================================================
+   14. SCREENS
+   ============================================================ */
+let customReturn = 'menu';
+
+function showScreen(id){
+  $('#toasts').innerHTML = '';
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('on'); });
+  $('#scr-' + id).classList.add('on');
+  if(id === 'custom') renderDesk();
+  if(id !== 'game' && S) S.running = false;
+}
+function startGame(fresh){
+  if(fresh || !S) S = freshState();
+  buildBoard();
+  renderEnts();
+  updateHud();
+  S.running = true; S.done = false;
+  startTick();
+  showScreen('game');
+  board.setAttribute('tabindex','0');
+  board.focus();
+  if(fresh){
+    setTimeout(function(){
+      toast('i-sign', 'Read the notice by the dock: press E beside it.');
+    }, 500);
+  }
+}
+function stopGame(){
+  clearInterval(tickTimer);
+  if(S) S.running = false;
+}
+
+document.addEventListener('click', function(e){
+  const b = e.target.closest('[data-go]');
+  if(!b) return;
+  const to = b.dataset.go;
+  if(to === 'game'){ startGame(b.dataset.fresh === '1'); return; }
+  if(to === 'custom'){ customReturn = 'menu'; showScreen('custom'); return; }
+  showScreen(to);
+});
+$('#btn-pause').addEventListener('click', openPause);
+$('#custom-back').addEventListener('click', function(){
+  if(customReturn === 'game' && S && !S.done){
+    showScreen('game');
+    S.running = true;
+    renderEnts();
+    board.focus();
+  } else {
+    showScreen('menu');
+  }
+});
+
+/* ============================================================
+   15. INPUT
+   ============================================================ */
+const KEYMAP = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  w:'up', a:'left', s:'down', d:'right',
+  W:'up', A:'left', S:'down', D:'right'
+};
+document.addEventListener('keydown', function(e){
+  if(!$('#scr-game').classList.contains('on')) return;
+  if(e.key === 'Escape'){
+    if(!$('#veil').hidden) closeModal(); else if(S && !S.done) openPause();
+    e.preventDefault(); return;
+  }
+  if(!$('#veil').hidden) return;
+  if(e.key === 'e' || e.key === 'E' || e.key === ' '){ interact(); e.preventDefault(); return; }
+  const dir = KEYMAP[e.key];
+  if(!dir) return;
+  e.preventDefault();
+  if(held[dir]) return;
+  held[dir] = true;
+  step(dir);
+  clearInterval(moveTimer);
+  moveTimer = setInterval(function(){
+    const active = Object.keys(held).filter(function(k){ return held[k]; });
+    if(!active.length){ clearInterval(moveTimer); return; }
+    step(active[active.length - 1]);
+  }, 160);
+});
+document.addEventListener('keyup', function(e){
+  const dir = KEYMAP[e.key];
+  if(dir) delete held[dir];
+  if(!Object.keys(held).length) clearInterval(moveTimer);
+});
+window.addEventListener('blur', function(){
+  for(const k in held) delete held[k];
+  clearInterval(moveTimer);
+});
+document.querySelectorAll('.dpad button').forEach(function(b){
+  b.addEventListener('click', function(){
+    if(b.dataset.dir === 'act') interact(); else step(b.dataset.dir);
+  });
+});
+
+/* ============================================================
+   16. FIELD DESK
+   ============================================================ */
+function renderDesk(){
+  const wrap = $('#slots');
+  wrap.innerHTML = SLOT_META.map(function(meta){
+    const opts = ITEMS[meta.key].map(function(it){
+      const on = L[meta.key] === it.id;
+      const lock = !unlocked.has(it.id);
+      return '<button class="opt' + (on ? ' on' : '') + (lock ? ' locked' : '') + '"' +
+        (lock ? ' disabled aria-disabled="true"' : '') +
+        ' data-slot="' + meta.key + '" data-item="' + it.id + '">' +
+        (on ? '<span class="chk">' + svg('i-check') + '</span>' : '') +
+        (lock ? svg('i-lock', 'lk') : '') +
+        svg(it.icon, 'oi') +
+        '<span class="nm">' + it.name + '</span>' +
+        '<span class="fl">' + (lock ? 'Still in a supply crate somewhere' : it.flavor) + '</span>' +
+      '</button>';
+    }).join('');
+    return '<div class="slot-row">' +
+      '<div class="slot-tab">' + svg(meta.icon) + meta.label + '</div>' +
+      '<div class="opts">' + opts + '</div></div>';
+  }).join('');
+
+  const dp = $('#desk-portrait');
+  dp.style.filter = PELT_TINT[L.pelt] === 'none' ? 'none' : PELT_TINT[L.pelt];
+  $('#worn-hat').innerHTML = '<use href="#' + findItem('hat', L.hat).icon + '"/>';
+  $('#worn-imp').innerHTML = '<use href="#' + findItem('implement', L.implement).icon + '"/>';
+  typeNote(fieldNote());
+}
+
+$('#slots').addEventListener('click', function(e){
+  const b = e.target.closest('.opt');
+  if(!b || b.classList.contains('locked')) return;
+  L[b.dataset.slot] = b.dataset.item;
+  save();
+  renderDesk();
+});
+
+let typeTimer = null;
+function typeNote(text){
+  const el = $('#notes-text');
+  clearInterval(typeTimer);
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ el.textContent = text; return; }
+  let i = 0;
+  el.innerHTML = '<span class="body"></span><span class="cursor"></span>';
+  const body = el.querySelector('.body');
+  typeTimer = setInterval(function(){
+    i += 3;
+    body.textContent = text.slice(0, i);
+    if(i >= text.length){
+      clearInterval(typeTimer);
+      setTimeout(function(){ el.textContent = text; }, 600);
+    }
+  }, 12);
+}
+
+/* ============================================================
+   17. BOOT
+   ============================================================ */
+const PORTRAIT = document.getElementById('menu-portrait').getAttribute('src');
+load();
+updateMenuRecord();
+renderDesk();
+
+})();
+</script>

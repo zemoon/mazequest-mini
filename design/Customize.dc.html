@@ -1,0 +1,287 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=Special+Elite&display=swap">
+  <style>
+    :root{
+      --paper: oklch(0.97 0.015 85);
+      --paper-dark: oklch(0.93 0.02 80);
+      --ink: oklch(0.27 0.03 55);
+      --ink-soft: oklch(0.45 0.03 60);
+      --green-deep: oklch(0.30 0.06 152);
+      --green: oklch(0.40 0.08 152);
+      --green-soft: oklch(0.90 0.03 145);
+      --brown: oklch(0.42 0.05 55);
+      --brown-dark: oklch(0.28 0.04 50);
+      --tan: oklch(0.80 0.06 75);
+      --red: oklch(0.52 0.16 25);
+      --gold: oklch(0.74 0.11 80);
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;}
+    a{color:var(--green-deep);} a:hover{color:var(--green-deep);}
+    .screen{
+      width:1280px; height:800px; position:relative;
+      background:var(--paper);
+      font-family:'Public Sans', system-ui, sans-serif;
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .frame{
+      position:absolute; inset:26px;
+      border:10px solid var(--brown-dark);
+      border-radius:14px;
+      background: var(--paper-dark);
+      box-shadow: inset 0 0 0 4px var(--tan), 0 18px 40px oklch(0.2 0.02 60 / 0.25);
+    }
+    .topbar{ position:absolute; top:44px; left:60px; right:60px; display:flex; align-items:center; gap:16px; }
+    .back-btn{
+      width:44px; height:44px; border-radius:50%;
+      background:var(--paper); border:2px solid var(--brown);
+      color:var(--brown-dark);
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 4px 0 var(--tan);
+    }
+    .back-btn svg{ width:18px; height:18px; }
+    .title-block h2{
+      font-family:'Bitter', serif; font-weight:800; font-size:26px; margin:0;
+      color:var(--green-deep);
+    }
+    .title-block .sub{
+      font-family:'Special Elite','Courier New',monospace; font-size:11px;
+      color:var(--brown); letter-spacing:.05em; margin-top:2px;
+    }
+
+    .portrait{
+      position:absolute; left:60px; top:116px; width:300px;
+      background:var(--paper); border:8px solid var(--paper);
+      outline:1px solid oklch(0.8 0.02 80);
+      box-shadow: 0 14px 26px oklch(0.2 0.02 60 / 0.28);
+    }
+    .portrait img{ width:100%; display:block; }
+    .portrait-plaque{
+      background:var(--brown-dark); color:var(--paper);
+      font-family:'Special Elite','Courier New',monospace;
+      font-size:12px; text-align:center; padding:10px 8px;
+      letter-spacing:.03em;
+    }
+    .portrait-plaque .name{ font-weight:700; font-size:13px; display:block; margin-bottom:2px; }
+
+    .slots{ position:absolute; left:400px; top:116px; width:760px; display:flex; flex-direction:column; gap:18px; }
+    .slot-row{ display:flex; gap:14px; align-items:stretch; }
+    .slot-label{
+      width:82px; flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+      background:var(--green-deep); color:var(--paper); border-radius:8px;
+      font-family:'Bitter', serif; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em;
+      text-align:center; padding:8px 4px;
+    }
+    .slot-label svg{ width:24px; height:24px; }
+    .cards{ display:flex; gap:12px; flex:1; }
+    .item-card{
+      flex:1; background:var(--paper); border:2px solid var(--tan); border-radius:8px;
+      padding:10px 8px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px;
+      position:relative;
+    }
+    .item-card.equipped{ border-color:var(--green); background:var(--green-soft); }
+    .item-ic{ width:34px; height:34px; color:var(--brown-dark); margin-top:2px; }
+    .item-card.equipped .item-ic{ color:var(--green-deep); }
+    .item-name{ font-size:11.5px; font-weight:700; line-height:1.2; }
+    .item-flavor{ font-size:10px; color:var(--ink-soft); font-style:italic; line-height:1.25; }
+    .equipped-badge{
+      position:absolute; top:-9px; right:-9px; width:22px; height:22px; border-radius:50%;
+      background:var(--green-deep); color:var(--paper);
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 3px 6px oklch(0.2 0.02 60 / 0.3);
+    }
+    .equipped-badge svg{ width:13px; height:13px; }
+
+    .notes{
+      position:absolute; left:60px; top:632px; width:1100px; min-height:104px;
+      background:var(--paper-dark); border:2px dashed var(--brown);
+      border-radius:8px; padding:20px 24px 16px 24px;
+    }
+    .notes-tab{
+      position:absolute; top:-14px; left:20px;
+      background:var(--red); color:var(--paper);
+      font-family:'Special Elite','Courier New',monospace; font-size:11px; letter-spacing:.08em;
+      padding:4px 12px; border-radius:3px;
+    }
+    .notes-text{
+      font-family:'Special Elite','Courier New',monospace; font-size:14.5px; line-height:1.6;
+      color:var(--ink);
+    }
+    .notes-hint{
+      margin-top:8px; font-size:11px; color:var(--ink-soft); font-style:italic;
+    }
+  </style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-stamp-check" viewBox="0 0 24 24">
+      <path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24">
+      <path d="M4 15c0-5 3.5-9 8-9s8 4 8 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M2 15h20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-eyeshade" viewBox="0 0 24 24">
+      <path d="M3 13c2-4 6-6 9-6s7 2 9 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M3 13h18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-fedora" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="15" rx="10" ry="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M8 15c-1-4 1-9 4-9s5 5 4 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M15 6c1 1 2 3 1 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-hood" viewBox="0 0 24 24">
+      <path d="M5 19c-1-6 2-14 7-14s8 8 7 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-stamp" viewBox="0 0 24 24">
+      <rect x="7" y="3" width="10" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M9 10v4h6v-4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <rect x="6" y="16" width="12" height="4" rx="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24">
+      <path d="M4 20l1-5L16 4l4 4L9 19l-5 1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      <line x1="14" y1="6" x2="18" y2="10" stroke="currentColor" stroke-width="1.8"/>
+    </symbol>
+    <symbol id="i-calipers" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="1.6" fill="currentColor"/>
+      <path d="M12 6.5L5 19M12 6.5l7 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="7" y1="14" x2="17" y2="14" stroke="currentColor" stroke-width="1.4"/>
+    </symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24">
+      <rect x="5" y="4" width="14" height="17" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <rect x="9" y="2.5" width="6" height="3.5" rx="1" fill="currentColor"/>
+      <line x1="8" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" stroke-width="1.4"/>
+    </symbol>
+    <symbol id="i-swatch" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M5 8c2-2 3 2 5 0s3 2 5 0 3 2 5 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M5 12c2-2 3 2 5 0s3 2 5 0 3 2 5 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M5 16c2-2 3 2 5 0s3 2 5 0 3 2 5 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="screen">
+  <div class="frame"></div>
+
+  <div class="topbar">
+    <div class="back-btn"><svg viewBox="0 0 24 24"><use href="#i-back"/></svg></div>
+    <div class="title-block">
+      <h2>Field Desk</h2>
+      <div class="sub">Customize before you head out on audit</div>
+    </div>
+  </div>
+
+  <div class="portrait">
+    <img src="bertie.png" alt="Inspector Bertie Castorum, current loadout">
+    <div class="portrait-plaque">
+      <span class="name">Insp. Bertie Castorum</span>
+      Field Auditor, Div. 7
+    </div>
+  </div>
+
+  <div class="slots">
+    <div class="slot-row">
+      <div class="slot-label"><svg viewBox="0 0 24 24"><use href="#i-cap"/></svg>Hat</div>
+      <div class="cards">
+        <div class="item-card equipped">
+          <div class="equipped-badge"><svg viewBox="0 0 24 24"><use href="#i-stamp-check"/></svg></div>
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-cap"/></svg>
+          <div class="item-name">Regulation Bureau Cap</div>
+          <div class="item-flavor">Third-gen felt cap</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-eyeshade"/></svg>
+          <div class="item-name">Novelty Eyeshade</div>
+          <div class="item-flavor">Confiscated visor</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-fedora"/></svg>
+          <div class="item-name">Feather Fedora</div>
+          <div class="item-flavor">Traded for two forms</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-hood"/></svg>
+          <div class="item-name">Field Hood</div>
+          <div class="item-flavor">Smells faintly of pond</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot-row">
+      <div class="slot-label"><svg viewBox="0 0 24 24"><use href="#i-stamp"/></svg>Implement</div>
+      <div class="cards">
+        <div class="item-card equipped">
+          <div class="equipped-badge"><svg viewBox="0 0 24 24"><use href="#i-stamp-check"/></svg></div>
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-stamp"/></svg>
+          <div class="item-name">Stamp of Record</div>
+          <div class="item-flavor">Approved / Denied</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-pencil"/></svg>
+          <div class="item-name">Chewed Pencil Stub</div>
+          <div class="item-flavor">Gnawed to a nub</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-calipers"/></svg>
+          <div class="item-name">Brass Calipers</div>
+          <div class="item-flavor">Measures to code</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>
+          <div class="item-name">Clipboard of Record</div>
+          <div class="item-flavor">Holds forty forms</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot-row">
+      <div class="slot-label"><svg viewBox="0 0 24 24"><use href="#i-swatch"/></svg>Pelt</div>
+      <div class="cards">
+        <div class="item-card equipped">
+          <div class="equipped-badge"><svg viewBox="0 0 24 24"><use href="#i-stamp-check"/></svg></div>
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-swatch"/></svg>
+          <div class="item-name">Standard Slick Pelt</div>
+          <div class="item-flavor">Regulation sheen</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-swatch"/></svg>
+          <div class="item-name">Damp Fieldwork Pelt</div>
+          <div class="item-flavor">Permanently damp</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-swatch"/></svg>
+          <div class="item-name">Silver-Streaked Pelt</div>
+          <div class="item-flavor">Two decades of service</div>
+        </div>
+        <div class="item-card">
+          <svg class="item-ic" viewBox="0 0 24 24"><use href="#i-swatch"/></svg>
+          <div class="item-name">Scarred Veteran Pelt</div>
+          <div class="item-flavor">One nick per permit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="notes-tab">Field Notes</div>
+    <div class="notes-text">"Inspector Bertie Castorum was observed wearing the standard-issue cap, carrying the dual-sided stamp, and maintaining a regulation sheen. Bureau assessment: compliant, if a little theatrical."</div>
+    <div class="notes-hint">Observed Traits rewrite live &mdash; swap any hat, implement, or pelt above and this note updates to match.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
